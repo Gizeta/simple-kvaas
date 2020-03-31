@@ -23,6 +23,8 @@ ENV HTTP_PORT 8080
 
 WORKDIR /opt/app
 
+VOLUME [ "/data" ]
+
 RUN apk update --no-cache && \
     apk upgrade --no-cache && \
     apk add --no-cache ncurses leveldb

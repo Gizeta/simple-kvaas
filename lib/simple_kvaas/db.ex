@@ -2,7 +2,7 @@ defmodule SimpleKVaaS.DB do
   use GenServer
   require Logger
 
-  @ttl_prefix "time/"
+  @ttl_prefix "time//"
 
   def init(args) do
     {:ok, args}
