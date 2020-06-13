@@ -2,6 +2,7 @@ defmodule SimpleKVaaS.Server do
   use Plug.Router
   use Plug.ErrorHandler
   alias SimpleKVaaS.DB
+  import Plug.Conn
 
   plug :match
   plug :dispatch
@@ -16,6 +17,11 @@ defmodule SimpleKVaaS.Server do
     conn |> do_write(key, value)
   end
 
+  post "/set/:key" do
+    value = conn |> build_body()
+    conn |> do_write(key, value)
+  end
+
   get "/:scope/get/:key" do
     conn
     |> put_resp_header("Content-Type", "text/html;charset=UTF-8")
@@ -23,6 +29,11 @@ defmodule SimpleKVaaS.Server do
   end
 
   get "/:scope/set/:key/:value" do
+    conn |> do_write("#{scope}/#{key}", value)
+  end
+
+  post "/:scope/set/:key" do
+    value = conn |> build_body()
     conn |> do_write("#{scope}/#{key}", value)
   end
 
@@ -48,5 +59,12 @@ defmodule SimpleKVaaS.Server do
   defp do_write(conn, key, value) do
     DB.put(key, value)
     send_resp(conn, 200, "ok")
+  end
+
+  defp build_body(conn, chunked \\ "") do
+    case read_body(conn) do
+      {:ok, body, _} -> chunked <> body
+      {:more, body, conn} -> build_body(conn, chunked <> body)
+    end
   end
 end
