@@ -5,7 +5,7 @@ defmodule SimpleKVaaS.MixProject do
     [
       app: :simple_kvaas,
       version: "0.3.0",
-      elixir: "~> 1.10",
+      elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
@@ -20,10 +20,10 @@ defmodule SimpleKVaaS.MixProject do
 
   defp deps do
     [
-      {:cowboy, "~> 2.7"},
+      {:cowboy, "~> 2.12"},
       {:eleveldb, "~> 2.2"},
-      {:plug, "~> 1.10"},
-      {:plug_cowboy, "~> 2.1"}
+      {:plug, "~> 1.16"},
+      {:plug_cowboy, "~> 2.7"}
     ]
   end
 end

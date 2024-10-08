@@ -1,4 +1,4 @@
-FROM elixir:1.10-alpine AS builder
+FROM elixir:1.17.3-alpine AS builder
 
 ENV MIX_ENV prod
 
@@ -17,7 +17,7 @@ RUN mix deps.get --only ${MIX_ENV} && \
     mix compile && \
     mix release
 
-FROM alpine:3.11
+FROM alpine:3.20.3
 
 ENV HTTP_PORT 8080
 
