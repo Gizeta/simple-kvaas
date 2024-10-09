@@ -20,6 +20,10 @@ defmodule SimpleKVaaS.Server do
     conn |> do_write(key, value)
   end
 
+  delete "/del/:key" do
+    conn |> do_delete(key)
+  end
+
   get "/:scope/get/:key" do
     conn |> do_read("#{scope}/#{key}")
   end
@@ -31,6 +35,10 @@ defmodule SimpleKVaaS.Server do
   post "/:scope/set/:key" do
     value = conn |> build_body()
     conn |> do_write("#{scope}/#{key}", value)
+  end
+
+  delete "/:scope/del/:key" do
+    conn |> do_delete("#{scope}/#{key}")
   end
 
   get "/list" do
@@ -63,6 +71,11 @@ defmodule SimpleKVaaS.Server do
 
   defp do_write(conn, key, value) do
     DB.put(key, value)
+    send_resp(conn, 200, "ok")
+  end
+
+  defp do_delete(conn, key) do
+    DB.del(key)
     send_resp(conn, 200, "ok")
   end
 
