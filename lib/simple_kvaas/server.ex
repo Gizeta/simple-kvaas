@@ -20,10 +20,6 @@ defmodule SimpleKVaaS.Server do
     conn |> do_write(key, value)
   end
 
-  delete "/del/:key" do
-    conn |> do_delete(key)
-  end
-
   get "/:scope/get/:key" do
     conn |> do_read("#{scope}/#{key}")
   end
@@ -37,16 +33,24 @@ defmodule SimpleKVaaS.Server do
     conn |> do_write("#{scope}/#{key}", value)
   end
 
-  delete "/:scope/del/:key" do
-    conn |> do_delete("#{scope}/#{key}")
+  if Application.compile_env(:simple_kvaas, :can_delete, true) do
+    delete "/del/:key" do
+      conn |> do_delete(key)
+    end
+
+    delete "/:scope/del/:key" do
+      conn |> do_delete("#{scope}/#{key}")
+    end
   end
 
-  get "/list" do
-    conn |> do_list("")
-  end
+  if Application.compile_env(:simple_kvaas, :can_list, true) do
+    get "/list" do
+      conn |> do_list("")
+    end
 
-  get "/list/:scope" do
-    conn |> do_list(scope)
+    get "/list/:scope" do
+      conn |> do_list(scope)
+    end
   end
 
   match _ do
