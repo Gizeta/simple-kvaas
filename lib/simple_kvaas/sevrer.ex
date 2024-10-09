@@ -8,9 +8,7 @@ defmodule SimpleKVaaS.Server do
   plug :dispatch
 
   get "/get/:key" do
-    conn
-    |> put_resp_header("Content-Type", "text/html;charset=UTF-8")
-    |> do_read(key)
+    conn |> do_read(key)
   end
 
   get "/set/:key/:value" do
@@ -23,9 +21,7 @@ defmodule SimpleKVaaS.Server do
   end
 
   get "/:scope/get/:key" do
-    conn
-    |> put_resp_header("Content-Type", "text/html;charset=UTF-8")
-    |> do_read("#{scope}/#{key}")
+    conn |> do_read("#{scope}/#{key}")
   end
 
   get "/:scope/set/:key/:value" do
@@ -37,6 +33,14 @@ defmodule SimpleKVaaS.Server do
     conn |> do_write("#{scope}/#{key}", value)
   end
 
+  get "/list" do
+    conn |> do_list("")
+  end
+
+  get "/list/:scope" do
+    conn |> do_list(scope)
+  end
+
   match _ do
     send_resp(conn, 404, "oops")
   end
@@ -46,6 +50,7 @@ defmodule SimpleKVaaS.Server do
   end
 
   defp do_read(conn, key) do
+    conn |> put_resp_content_type("text/html;charset=UTF-8")
     case DB.get(key) do
       {:ok, value} ->
         send_resp(conn, 200, value)
@@ -59,6 +64,30 @@ defmodule SimpleKVaaS.Server do
   defp do_write(conn, key, value) do
     DB.put(key, value)
     send_resp(conn, 200, "ok")
+  end
+
+  defp do_list(conn, "") do
+    conn = conn
+    |> put_resp_content_type("text/event-stream")
+    |> send_chunked(200)
+
+    Enum.map(DB.key_stream(), fn (k) ->
+      chunk(conn, k)
+      chunk(conn, "\n")
+    end)
+    conn
+  end
+
+  defp do_list(conn, scope) do
+    conn = conn
+    |> put_resp_content_type("text/event-stream")
+    |> send_chunked(200)
+
+    Enum.map(DB.key_stream(scope), fn (k) ->
+      chunk(conn, k)
+      chunk(conn, "\n")
+    end)
+    conn
   end
 
   defp build_body(conn, chunked \\ "") do

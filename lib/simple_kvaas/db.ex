@@ -26,6 +26,13 @@ defmodule SimpleKVaaS.DB do
     GenServer.call(:db, {:get, key})
   end
 
+  def key_stream() do
+    GenServer.call(:db, {:key_stream})
+  end
+  def key_stream(prefix) do
+    GenServer.call(:db, {:key_stream, prefix})
+  end
+
   def put(key, value) do
     GenServer.cast(:db, {:put, key, value})
   end
@@ -34,12 +41,16 @@ defmodule SimpleKVaaS.DB do
     GenServer.cast(:db, {:delete, key})
   end
 
-  def each(func) do
-    GenServer.cast(:db, {:each, func})
-  end
-
   def handle_call({:get, key}, _from, db) do
     {:reply, :eleveldb.get(db, key, []), db}
+  end
+
+  def handle_call({:key_stream}, _from, db) do
+    {:reply, stream(db, &(!String.contains?(&1, "/"))), db}
+  end
+
+  def handle_call({:key_stream, prefix}, _from, db) do
+    {:reply, stream(db, &(String.starts_with?(&1, prefix <> "/"))), db}
   end
 
   def handle_cast({:put, key, value}, db) do
@@ -54,30 +65,30 @@ defmodule SimpleKVaaS.DB do
     {:noreply, db}
   end
 
-  def handle_cast({:each, func}, db) do
-    {:ok, itr} = :eleveldb.iterator(db, [])
-    case :eleveldb.iterator_move(itr, :first) do
-      {:ok, key, value} ->
-        func.(key, value)
-        iter_loop(db, itr, func)
-      _ ->
-        :ok
-    end
-    {:noreply, db}
-  end
-
   def terminate(reason, db) do
     Logger.info("db will be closed due to #{reason}")
     :eleveldb.close(db)
   end
 
-  defp iter_loop(db, itr, func) do
-    case :eleveldb.iterator_move(itr, :next) do
-      {:ok, key, value} ->
-        func.(key, value)
-        iter_loop(db, itr, func)
-      _ ->
-        :ok
-    end
+  defp stream(db, func) do
+    Stream.resource(
+      fn ->
+        {:ok, iter} = :eleveldb.iterator(db, [], :keys_only)
+        {:first, iter}
+      end,
+      fn {state, iter} ->
+        case :eleveldb.iterator_move(iter, state) do
+          {:ok, k} ->
+            case func.(k) do
+              true -> {[k], {:next, iter}}
+              false -> {[], {:next, iter}}
+            end
+          _ -> {:halt, {state, iter}}
+        end
+      end,
+      fn {_, iter} ->
+        :eleveldb.iterator_close(iter)
+      end
+    )
   end
 end
