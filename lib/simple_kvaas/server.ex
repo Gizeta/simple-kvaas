@@ -8,7 +8,10 @@ defmodule SimpleKVaaS.Server do
   plug :dispatch
 
   get "/get/:key" do
-    conn |> do_read(key)
+    conn = with conn <- conn |> fetch_query_params(),
+         type <- conn.params["type"],
+         conn <- conn |> put_resp_content_type(if type == nil, do: "text/plain", else: type),
+         conn <- conn |> do_read(key), do: conn
   end
 
   get "/set/:key/:value" do
@@ -62,7 +65,6 @@ defmodule SimpleKVaaS.Server do
   end
 
   defp do_read(conn, key) do
-    conn |> put_resp_content_type("text/html;charset=UTF-8")
     case DB.get(key) do
       {:ok, value} ->
         send_resp(conn, 200, value)
